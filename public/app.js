@@ -73,14 +73,17 @@ const S = {
 
 /* ---------------- boot & router ---------------- */
 async function boot() {
+  let st;
   try {
-    const st = await api('GET', '/api/status');
-    S.setupNeeded = st.setupNeeded;
-    S.loggedIn = st.loggedIn;
+    st = await api('GET', '/api/status');
   } catch (e) {
     $('#view').innerHTML = '<div class="empty"><div class="big">⚠️</div><p>Could not reach the Gatekeeper server.<br>Is it running? <code>npm start</code></p></div>';
     return;
   }
+  S.storageOk = st.storageOk !== false;
+  S.missingSecret = !!st.missingSecret;
+  S.setupNeeded = !!st.setupNeeded;
+  S.loggedIn = !!st.loggedIn;
   $('#logout-btn').addEventListener('click', async () => {
     stopScanner();
     await api('POST', '/api/logout').catch(() => {});
@@ -101,6 +104,8 @@ function router() {
   stopScanner();
   closeModal();
   const h = location.hash || '#/';
+  if (!S.storageOk) { setNav(''); return showStorageHelp(); }
+  if (S.missingSecret) { setNav(''); return showSecretSetup(); }
   if (S.setupNeeded) { setNav(''); return showSetup(); }
   if (!S.loggedIn && h !== '#/login') { location.hash = '#/login'; return; }
 
@@ -111,6 +116,57 @@ function router() {
   if ((m = /^#\/event\/([A-Za-z0-9_-]+)$/.exec(h))) { setNav('events'); return showEvent(m[1]); }
   if ((m = /^#\/event\/([A-Za-z0-9_-]+)\/print$/.exec(h))) { setNav('events'); return showPrint(m[1]); }
   location.hash = '#/';
+}
+
+/* ---------------- first-run: storage & secret ---------------- */
+function showStorageHelp() {
+  $('#view').innerHTML = `
+    <div class="auth-wrap"><div class="card auth-card">
+      <div class="brand-mark">G</div>
+      <h1>Connect storage</h1>
+      <p>Gatekeeper needs a database before it can issue tickets. This takes about a minute:</p>
+      <div class="security-note" style="text-align:left">
+        <b>1.</b> In your Vercel dashboard, open this project → <b>Storage</b> tab.<br>
+        <b>2.</b> Click <b>Create Database</b> → choose <b>KV</b> → <b>Continue</b>.<br>
+        <b>3.</b> Connect it to this project when asked.<br>
+        <b>4.</b> Come back here and refresh — setup continues automatically.
+      </div>
+      <button class="btn btn-block" style="margin-top:18px" onclick="location.reload()">Refresh</button>
+    </div></div>`;
+}
+
+function showSecretSetup() {
+  $('#view').innerHTML = `
+    <div class="auth-wrap"><div class="card auth-card">
+      <div class="brand-mark">G</div>
+      <h1>Set the signing secret</h1>
+      <p>Every ticket QR is sealed with a secret key. Generate one, add it as an environment variable, then redeploy:</p>
+      <div class="field"><label>Your secret (64 hex characters)</label>
+        <input id="secret-val" readonly placeholder="Press Generate…">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" id="secret-gen" style="flex:1">Generate</button>
+        <button class="btn btn-ghost btn-sm" id="secret-copy" style="flex:1">Copy</button>
+      </div>
+      <div class="security-note" style="text-align:left;margin-top:16px">
+        <b>1.</b> Press <b>Generate</b>, then <b>Copy</b>.<br>
+        <b>2.</b> Vercel dashboard → this project → <b>Settings</b> → <b>Environment Variables</b>.<br>
+        <b>3.</b> Add variable named <b><code>GATEKEEPER_SECRET</code></b>, paste the value, save.<br>
+        <b>4.</b> <b>Deployments</b> tab → <b>Redeploy</b>. Then refresh this page.<br><br>
+        <b>Keep this secret safe.</b> Losing it invalidates every pass ever issued.
+      </div>
+    </div></div>`;
+  $('#secret-gen').addEventListener('click', () => {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    $('#secret-val').value = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+  });
+  $('#secret-copy').addEventListener('click', async () => {
+    const v = $('#secret-val').value;
+    if (!v) return toast('Generate a secret first.', 'err');
+    try { await navigator.clipboard.writeText(v); toast('Copied.', 'ok'); }
+    catch (e) { $('#secret-val').select(); toast('Copy it manually.', 'err'); }
+  });
 }
 
 /* ---------------- auth views ---------------- */
