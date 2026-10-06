@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Gatekeeper — Secure Ticket Passes</title>
+<meta name="description" content="Unforgeable QR ticket passes. Host-only creation, app-only verification.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0d10'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='34' fill='%23e8b84b' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar" class="hidden">
+    <a class="brand" href="#/"><span class="brand-mark">G</span><span class="brand-name">Gatekeeper</span></a>
+    <nav>
+      <a href="#/" data-nav="events">Events</a>
+      <a href="#/scan" data-nav="scan">Scanner</a>
+    </nav>
+    <div class="topbar-right">
+      <span class="host-badge">HOST</span>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Log out</button>
+    </div>
+  </header>
+  <main id="view"></main>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+<script src="/vendor/qr-code-styling.js"></script>
+<script src="/vendor/html5-qrcode.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
